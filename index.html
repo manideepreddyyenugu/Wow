@@ -1,0 +1,834 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#090e19" />
+  <meta name="description" content="A touch-friendly arrow escape logic puzzle with endlessly generated, solvable levels." />
+  <title>Arrow Out — Puzzle Game</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #090e19;
+      --panel: #111a2b;
+      --panel2: #151f33;
+      --line: rgba(159, 183, 224, .13);
+      --text: #eef4ff;
+      --muted: #91a0ba;
+      --cyan: #5ce1d2;
+      --cyan2: #27bdae;
+      --violet: #a78bfa;
+      --orange: #ffb66d;
+      --red: #ff7188;
+      --shadow: 0 22px 70px rgba(0,0,0,.28);
+    }
+    * { box-sizing: border-box; }
+    html { min-height: 100%; background: var(--bg); }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      color: var(--text);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background:
+        radial-gradient(ellipse at 12% 0%, rgba(39,189,174,.13), transparent 34rem),
+        radial-gradient(ellipse at 92% 9%, rgba(124,96,220,.13), transparent 32rem),
+        linear-gradient(180deg, #0a1020 0%, #090e19 65%);
+    }
+    button { font: inherit; }
+    .app { width: min(1100px, 100%); margin: 0 auto; padding: 24px clamp(14px, 3vw, 30px) 34px; }
+    .topbar { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 30px; }
+    .brand { display: flex; align-items: center; gap: 11px; font-weight: 850; letter-spacing: .09em; font-size: 14px; }
+    .brand-mark { width: 38px; height: 38px; display: grid; place-items: center; border: 1px solid rgba(92,225,210,.32); border-radius: 12px; color: var(--cyan); background: rgba(92,225,210,.08); box-shadow: 0 0 24px rgba(39,189,174,.08); }
+    .brand-mark svg { width: 22px; height: 22px; }
+    .top-tag { color: #a8bad4; border: 1px solid var(--line); background: rgba(17,26,43,.6); padding: 8px 12px; border-radius: 999px; font-size: 11px; font-weight: 750; letter-spacing: .13em; }
+    .intro { display: flex; align-items: end; justify-content: space-between; gap: 20px; margin-bottom: 23px; }
+    .eyebrow { display: flex; align-items: center; gap: 8px; color: var(--cyan); font-size: 10px; letter-spacing: .2em; font-weight: 850; text-transform: uppercase; margin-bottom: 10px; }
+    .eyebrow::before { content: ""; width: 20px; height: 1px; background: var(--cyan); }
+    h1 { margin: 0; font-size: clamp(32px, 5vw, 54px); line-height: .98; letter-spacing: -.055em; }
+    h1 span { color: var(--cyan); }
+    .subtitle { color: var(--muted); margin: 12px 0 0; line-height: 1.55; font-size: 14px; max-width: 510px; }
+    .seed-pill { flex: 0 0 auto; border: 1px solid var(--line); border-radius: 12px; padding: 10px 13px; background: rgba(17,26,43,.72); color: var(--muted); font-size: 10px; letter-spacing: .12em; font-weight: 800; }
+    .seed-pill strong { color: #dce8fa; font-variant-numeric: tabular-nums; margin-left: 6px; }
+    .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 13px; }
+    .stat { min-width: 0; border: 1px solid var(--line); background: linear-gradient(145deg, rgba(21,31,51,.95), rgba(15,23,39,.95)); border-radius: 14px; padding: 12px 15px; box-shadow: 0 8px 25px rgba(0,0,0,.1); }
+    .stat-label { font-size: 9px; text-transform: uppercase; letter-spacing: .16em; color: var(--muted); font-weight: 800; }
+    .stat-value { margin-top: 5px; font-size: 22px; line-height: 1.1; font-weight: 850; font-variant-numeric: tabular-nums; }
+    .stat-value.hearts { color: var(--red); letter-spacing: .04em; font-size: 19px; }
+    .game-layout { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(255px, .78fr); gap: 14px; align-items: start; }
+    .board-card, .side-card { border: 1px solid var(--line); background: linear-gradient(145deg, rgba(18,28,47,.97), rgba(13,21,36,.98)); border-radius: 21px; box-shadow: var(--shadow); }
+    .board-card { padding: clamp(10px, 2vw, 18px); }
+    .board-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 2px 3px 13px; }
+    .board-title { font-size: 12px; font-weight: 850; letter-spacing: .12em; text-transform: uppercase; }
+    .difficulty { font-size: 9px; padding: 6px 9px; border-radius: 999px; border: 1px solid rgba(92,225,210,.2); color: var(--cyan); background: rgba(92,225,210,.07); letter-spacing: .12em; font-weight: 850; white-space: nowrap; }
+    .board-wrap { position: relative; overflow: hidden; border-radius: 15px; background: #0b1424; border: 1px solid rgba(155,180,220,.13); }
+    canvas { width: 100%; aspect-ratio: 1 / 1; display: block; touch-action: none; outline: none; }
+    canvas:focus-visible { box-shadow: inset 0 0 0 3px var(--cyan); }
+    .board-foot { display: flex; justify-content: space-between; gap: 12px; padding: 12px 3px 1px; color: var(--muted); font-size: 11px; }
+    .board-foot strong { color: #dce8fa; font-weight: 750; }
+    .side-card { padding: 18px; }
+    .side-card + .side-card { margin-top: 14px; }
+    .section-title { margin: 0 0 12px; font-size: 11px; text-transform: uppercase; letter-spacing: .15em; font-weight: 850; color: #dce8fa; }
+    .message { min-height: 70px; display: flex; align-items: center; gap: 11px; padding: 12px; border-radius: 13px; border: 1px solid rgba(92,225,210,.15); background: rgba(92,225,210,.055); color: #c8d7ea; font-size: 12px; line-height: 1.45; }
+    .message-icon { flex: 0 0 30px; width: 30px; height: 30px; display: grid; place-items: center; border-radius: 10px; background: rgba(92,225,210,.12); color: var(--cyan); font-size: 16px; }
+    .actions { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; margin-top: 14px; }
+    .btn { min-height: 45px; border: 1px solid rgba(160,184,224,.16); border-radius: 12px; padding: 10px 12px; display: flex; align-items: center; justify-content: center; gap: 8px; color: #dce8fa; background: rgba(35,49,75,.72); font-size: 12px; font-weight: 800; cursor: pointer; transition: transform .15s ease, border-color .15s ease, background .15s ease; -webkit-tap-highlight-color: transparent; }
+    .btn:hover:not(:disabled) { transform: translateY(-1px); border-color: rgba(92,225,210,.45); background: rgba(43,64,90,.9); }
+    .btn:active:not(:disabled) { transform: translateY(1px) scale(.99); }
+    .btn:focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; }
+    .btn:disabled { opacity: .38; cursor: not-allowed; }
+    .btn.primary { color: #071817; border-color: transparent; background: linear-gradient(135deg, #72f1df, #31c8b9); box-shadow: 0 8px 24px rgba(39,189,174,.16); }
+    .btn.primary:hover:not(:disabled) { background: linear-gradient(135deg, #9af7e9, #53ddce); }
+    .btn.wide { grid-column: 1 / -1; }
+    .btn .ico { font-size: 15px; line-height: 1; }
+    .microcopy { color: var(--muted); font-size: 10px; line-height: 1.6; margin: 13px 1px 0; }
+    .howto { margin-top: 14px; border: 1px solid var(--line); border-radius: 14px; background: rgba(10,17,30,.48); }
+    .howto summary { cursor: pointer; padding: 13px 14px; color: #cfdaec; font-size: 11px; font-weight: 800; letter-spacing: .04em; }
+    .howto p { margin: 0; padding: 0 14px 14px; color: var(--muted); font-size: 11px; line-height: 1.65; }
+    .legend { display: flex; align-items: center; flex-wrap: wrap; gap: 14px; margin-top: 13px; color: var(--muted); font-size: 10px; }
+    .legend-item { display: inline-flex; align-items: center; gap: 6px; }
+    .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--cyan); box-shadow: 0 0 9px rgba(92,225,210,.45); }
+    .dot.blocked { background: var(--violet); box-shadow: 0 0 9px rgba(167,139,250,.4); }
+    .footer { display: flex; justify-content: space-between; gap: 12px; margin-top: 18px; color: #71819c; font-size: 10px; }
+    .overlay { position: absolute; inset: 0; z-index: 3; display: none; place-items: center; padding: 20px; background: rgba(4,9,17,.78); backdrop-filter: blur(7px); text-align: center; }
+    .overlay.show { display: grid; }
+    .overlay-box { width: min(290px, 100%); border: 1px solid rgba(92,225,210,.26); border-radius: 18px; padding: 22px; background: #131f32; box-shadow: 0 20px 70px rgba(0,0,0,.4); }
+    .overlay-symbol { font-size: 31px; }
+    .overlay h2 { margin: 8px 0 6px; font-size: 22px; letter-spacing: -.04em; }
+    .overlay p { color: var(--muted); font-size: 12px; line-height: 1.55; margin: 0 0 15px; }
+    .overlay .btn { width: 100%; }
+    .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
+    @media (max-width: 760px) {
+      .app { padding-top: 15px; }
+      .topbar { margin-bottom: 22px; }
+      .intro { align-items: start; flex-direction: column; gap: 13px; margin-bottom: 17px; }
+      .seed-pill { align-self: start; }
+      .game-layout { grid-template-columns: 1fr; }
+      .side-column { display: grid; grid-template-columns: 1fr; gap: 12px; }
+      .side-card + .side-card { margin-top: 0; }
+      .board-card { padding: 10px; }
+      .board-foot { font-size: 10px; }
+    }
+    @media (max-width: 420px) {
+      .stats { gap: 6px; }
+      .stat { padding: 10px 9px; border-radius: 11px; }
+      .stat-label { font-size: 8px; letter-spacing: .1em; }
+      .stat-value { font-size: 19px; }
+      .stat-value.hearts { font-size: 16px; }
+      .top-tag { font-size: 9px; padding: 7px 9px; }
+      .brand { font-size: 12px; }
+      .brand-mark { width: 34px; height: 34px; }
+    }
+    @media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; transition: none !important; } }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <header class="topbar">
+      <div class="brand">
+        <div class="brand-mark" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none"><path d="M12 3v8m0 0 4-4m-4 4L8 7M5 14v6m0 0 3-3m-3 3-3-3m17-3v6m0 0 3-3m-3 3-3-3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
+        ARROW OUT
+      </div>
+      <div class="top-tag">ENDLESS LOGIC PUZZLES</div>
+    </header>
+
+    <section class="intro" aria-labelledby="main-title">
+      <div>
+        <div class="eyebrow">Think ahead. Clear the way.</div>
+        <h1 id="main-title">One grid.<br /><span>One way out.</span></h1>
+        <p class="subtitle">Tap each arrow to send it off the board. Clear the path, uncover the next move, and beat a fresh puzzle every time.</p>
+      </div>
+      <div class="seed-pill">PUZZLE SEED<strong id="seed-label">--------</strong></div>
+    </section>
+
+    <section class="stats" aria-label="Game statistics">
+      <div class="stat"><div class="stat-label">Level</div><div class="stat-value" id="level-value">1</div></div>
+      <div class="stat"><div class="stat-label">Arrows left</div><div class="stat-value" id="remaining-value">0</div></div>
+      <div class="stat"><div class="stat-label">Lives</div><div class="stat-value hearts" id="lives-value">♥♥♥</div></div>
+      <div class="stat"><div class="stat-label">Score</div><div class="stat-value" id="score-value">0</div></div>
+    </section>
+
+    <section class="game-layout">
+      <div class="board-card">
+        <div class="board-head">
+          <div class="board-title">Puzzle board</div>
+          <div class="difficulty" id="difficulty-label">WARM UP</div>
+        </div>
+        <div class="board-wrap">
+          <canvas id="board" tabindex="0" role="grid" aria-label="Arrow puzzle board. Tap an arrow whose path to the edge is clear. Use the arrow keys to select a tile and Enter to move it."></canvas>
+          <div class="overlay" id="overlay" aria-live="polite">
+            <div class="overlay-box">
+              <div class="overlay-symbol" id="overlay-symbol">✦</div>
+              <h2 id="overlay-title">Puzzle cleared!</h2>
+              <p id="overlay-copy">Every arrow found its way out.</p>
+              <button class="btn primary" id="overlay-action">Next level <span aria-hidden="true">→</span></button>
+            </div>
+          </div>
+        </div>
+        <div class="board-foot"><span>Tap / click an arrow to move</span><strong id="moves-label">0 moves</strong></div>
+        <div class="legend" aria-label="Arrow legend"><span class="legend-item"><i class="dot"></i> Clear path</span><span class="legend-item"><i class="dot blocked"></i> Path blocked</span></div>
+      </div>
+
+      <div class="side-column">
+        <section class="side-card" aria-labelledby="status-heading">
+          <h2 class="section-title" id="status-heading">Mission control</h2>
+          <div class="message" aria-live="polite" aria-atomic="true">
+            <div class="message-icon" id="message-icon" aria-hidden="true">↗</div>
+            <div id="message-text">Find an arrow with a clear lane to the edge. Clear arrows first to open the board.</div>
+          </div>
+          <div class="actions">
+            <button class="btn" id="undo-btn" disabled><span class="ico" aria-hidden="true">↶</span> Undo</button>
+            <button class="btn" id="hint-btn"><span class="ico" aria-hidden="true">✦</span> Hint</button>
+            <button class="btn" id="restart-btn"><span class="ico" aria-hidden="true">⟳</span> Restart</button>
+            <button class="btn" id="new-btn"><span class="ico" aria-hidden="true">⤨</span> New puzzle</button>
+            <button class="btn primary wide" id="next-btn" hidden>Next level <span aria-hidden="true">→</span></button>
+          </div>
+          <p class="microcopy">A blocked arrow costs one life. You have three chances — use Undo to take back a move or a mistake.</p>
+        </section>
+
+        <section class="side-card">
+          <h2 class="section-title">How to play</h2>
+          <details class="howto" open>
+            <summary>Read the rules</summary>
+            <p>Each tile is an arrow pointing up, right, down, or left. Tap it to send it toward the nearest board edge. Its path must be empty. Remove the arrows in the right order until the board is clear.</p>
+          </details>
+          <p class="microcopy">Keyboard: focus the board, use ↑ ↓ ← → to select an arrow, then press Enter or Space. Every puzzle is generated with a guaranteed solution.</p>
+        </section>
+      </div>
+    </section>
+
+    <footer class="footer"><span>ARROW OUT · Procedurally generated puzzles</span><span>Made for touch, mouse & keyboard</span></footer>
+    <div class="sr-only" id="announcement" aria-live="polite" aria-atomic="true"></div>
+  </main>
+
+  <script>
+    (() => {
+      'use strict';
+
+      const $ = (id) => document.getElementById(id);
+      const canvas = $('board');
+      const ctx = canvas.getContext('2d');
+      const dirs = [
+        { x: 0, y: -1, symbol: '↑', name: 'up' },
+        { x: 1, y: 0, symbol: '→', name: 'right' },
+        { x: 0, y: 1, symbol: '↓', name: 'down' },
+        { x: -1, y: 0, symbol: '←', name: 'left' }
+      ];
+
+      const storage = {
+        get(key, fallback) {
+          try { const value = localStorage.getItem(key); return value === null ? fallback : value; }
+          catch (_) { return fallback; }
+        },
+        set(key, value) { try { localStorage.setItem(key, String(value)); } catch (_) {} }
+      };
+
+      let level = Math.max(1, Number(storage.get('arrowout.level', 1)) || 1);
+      let score = Math.max(0, Number(storage.get('arrowout.score', 0)) || 0);
+      let best = Math.max(0, Number(storage.get('arrowout.best', 0)) || 0);
+      let seed = randomSeed();
+      let gridSize = 5;
+      let arrows = [];
+      let initialArrows = [];
+      let lives = 3;
+      let moves = 0;
+      let history = [];
+      let hintId = null;
+      let selected = { x: 0, y: 0 };
+      let hoverCell = null;
+      let animation = null;
+      let busy = false;
+      let won = false;
+      let gameOver = false;
+      let badArrowId = null;
+      let badBlockerId = null;
+      let badUntil = 0;
+      let geometry = { side: 0, pad: 0, gap: 0, cell: 0 };
+
+      function randomSeed() {
+        if (window.crypto && window.crypto.getRandomValues) {
+          const values = new Uint32Array(1);
+          window.crypto.getRandomValues(values);
+          return values[0] || 1;
+        }
+        return Math.floor(Math.random() * 0xffffffff) || 1;
+      }
+
+      function mulberry32(a) {
+        return function() {
+          let t = a += 0x6D2B79F5;
+          t = Math.imul(t ^ (t >>> 15), t | 1);
+          t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+          return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+        };
+      }
+
+      function shuffle(list, rng) {
+        for (let i = list.length - 1; i > 0; i--) {
+          const j = Math.floor(rng() * (i + 1));
+          [list[i], list[j]] = [list[j], list[i]];
+        }
+        return list;
+      }
+
+      function levelSettings(number) {
+        const size = Math.min(10, 5 + Math.floor((number - 1) / 3));
+        const density = Math.min(0.68, 0.38 + number * 0.012);
+        return { size, target: Math.max(6, Math.round(size * size * density)) };
+      }
+
+      function rayCellsClear(x, y, dir, occupied, size) {
+        const d = dirs[dir];
+        let cx = x + d.x;
+        let cy = y + d.y;
+        let length = 0;
+        while (cx >= 0 && cy >= 0 && cx < size && cy < size) {
+          length++;
+          if (occupied.has(`${cx},${cy}`)) return { clear: false, length };
+          cx += d.x;
+          cy += d.y;
+        }
+        return { clear: true, length };
+      }
+
+      // Reverse construction: each newly placed arrow has an open exit lane.
+      // Later placements may block it, but those later arrows are guaranteed
+      // to be removable first. Reversing placement order is therefore a solution.
+      function generateLevel(number, baseSeed) {
+        const settings = levelSettings(number);
+        const size = settings.size;
+        const target = settings.target;
+        let bestCandidate = null;
+
+        for (let attempt = 0; attempt < 180; attempt++) {
+          const attemptSeed = (baseSeed + Math.imul(attempt + 1, 0x9E3779B9)) >>> 0;
+          const rng = mulberry32(attemptSeed);
+          const cells = [];
+          for (let y = 0; y < size; y++) for (let x = 0; x < size; x++) cells.push({ x, y });
+          shuffle(cells, rng);
+
+          const occupied = new Map();
+          const placed = [];
+          for (const cell of cells) {
+            if (placed.length >= target) break;
+            const options = [];
+            for (let direction = 0; direction < 4; direction++) {
+              const result = rayCellsClear(cell.x, cell.y, direction, occupied, size);
+              if (result.clear) options.push({ direction, length: result.length });
+            }
+            if (!options.length) continue;
+            const longest = Math.max(...options.map(option => option.length));
+            const useful = options.filter(option => option.length >= longest * 0.6);
+            const choice = useful[Math.floor(rng() * useful.length)];
+            const arrow = { id: placed.length, x: cell.x, y: cell.y, dir: choice.direction, active: true };
+            occupied.set(`${cell.x},${cell.y}`, arrow.id);
+            placed.push(arrow);
+          }
+
+          if (!placed.length) continue;
+          const candidate = placed.map(arrow => ({ ...arrow }));
+          const freeAtStart = candidate.filter(arrow => getBlockers(arrow, candidate, size).length === 0).length;
+          const solvable = verifySolvable(candidate, size);
+          if (!solvable) continue;
+          const waves = countWaves(candidate, size);
+          const ratio = freeAtStart / candidate.length;
+          const result = { size, arrows: candidate, freeAtStart, waves };
+
+          if (!bestCandidate || candidate.length > bestCandidate.arrows.length ||
+              (candidate.length === bestCandidate.arrows.length && Math.abs(ratio - 0.34) < Math.abs(bestCandidate.freeAtStart / bestCandidate.arrows.length - 0.34))) {
+            bestCandidate = result;
+          }
+          if (candidate.length >= target && ratio <= 0.75 && waves >= 2) return result;
+        }
+
+        // The fallback is still solver-verified; it protects against a rare
+        // unlucky seed without ever returning an unsolvable board.
+        if (bestCandidate && verifySolvable(bestCandidate.arrows, size)) return bestCandidate;
+        return { size, arrows: [], freeAtStart: 0, waves: 0 };
+      }
+
+      function getBlockers(arrow, source = arrows, boardSize = gridSize) {
+        const d = dirs[arrow.dir];
+        let x = arrow.x + d.x;
+        let y = arrow.y + d.y;
+        const found = [];
+        while (x >= 0 && y >= 0 && x < boardSize && y < boardSize) {
+          const blocker = source.find(other => other.active && other.id !== arrow.id && other.x === x && other.y === y);
+          if (blocker) found.push(blocker);
+          x += d.x;
+          y += d.y;
+        }
+        return found;
+      }
+
+      function verifySolvable(source, boardSize = gridSize) {
+        const copy = source.map(arrow => ({ ...arrow }));
+        let remaining = copy.length;
+        while (remaining > 0) {
+          const free = copy.filter(arrow => arrow.active && getBlockers(arrow, copy, boardSize).length === 0);
+          if (!free.length) return false;
+          for (const arrow of free) arrow.active = false;
+          remaining -= free.length;
+        }
+        return true;
+      }
+
+      function countWaves(source, boardSize = gridSize) {
+        const copy = source.map(arrow => ({ ...arrow }));
+        let remaining = copy.length;
+        let waves = 0;
+        while (remaining > 0) {
+          const free = copy.filter(arrow => arrow.active && getBlockers(arrow, copy, boardSize).length === 0);
+          if (!free.length) return 0;
+          for (const arrow of free) arrow.active = false;
+          remaining -= free.length;
+          waves++;
+        }
+        return waves;
+      }
+
+      function saveProgress() {
+        storage.set('arrowout.level', level);
+        storage.set('arrowout.score', score);
+        storage.set('arrowout.best', best);
+      }
+
+      function startLevel(newSeed = randomSeed()) {
+        seed = newSeed >>> 0;
+        const generated = generateLevel(level, seed);
+        gridSize = generated.size;
+        arrows = generated.arrows.map(arrow => ({ ...arrow, active: true }));
+        initialArrows = arrows.map(arrow => ({ ...arrow, active: true }));
+        lives = 3;
+        moves = 0;
+        history = [];
+        hintId = null;
+        busy = false;
+        animation = null;
+        won = false;
+        gameOver = false;
+        badArrowId = null;
+        badBlockerId = null;
+        selected = firstActiveCell();
+        $('seed-label').textContent = seed.toString(16).toUpperCase().padStart(8, '0');
+        $('difficulty-label').textContent = difficultyName(level, generated.waves);
+        $('next-btn').hidden = true;
+        $('overlay').classList.remove('show');
+        setMessage('↗', 'Find an arrow with a clear lane to the edge. Clear arrows first to open the board.');
+        updateUI();
+        resizeCanvas();
+        canvas.focus({ preventScroll: true });
+      }
+
+      function difficultyName(number, waves) {
+        if (number < 4) return 'WARM UP';
+        if (number < 10) return 'TRICKY';
+        if (number < 20) return 'CHALLENGING';
+        if (number < 35) return 'HARD';
+        return waves >= 7 ? 'EXPERT' : 'MASTER';
+      }
+
+      function firstActiveCell() {
+        const first = arrows.find(arrow => arrow.active);
+        return first ? { x: first.x, y: first.y } : { x: 0, y: 0 };
+      }
+
+      function setMessage(icon, message) {
+        $('message-icon').textContent = icon;
+        $('message-text').textContent = message;
+        $('announcement').textContent = message;
+      }
+
+      function updateUI() {
+        const remaining = arrows.reduce((count, arrow) => count + (arrow.active ? 1 : 0), 0);
+        $('level-value').textContent = level.toLocaleString();
+        $('remaining-value').textContent = remaining.toLocaleString();
+        $('lives-value').textContent = '♥'.repeat(lives) + '♡'.repeat(3 - lives);
+        $('score-value').textContent = score.toLocaleString();
+        $('moves-label').textContent = `${moves} ${moves === 1 ? 'move' : 'moves'}`;
+        $('undo-btn').disabled = history.length === 0 || busy;
+        $('hint-btn').disabled = won || gameOver || busy || remaining === 0;
+        $('restart-btn').disabled = busy;
+        $('new-btn').disabled = busy;
+        $('next-btn').hidden = !won;
+      }
+
+      function snapshot() {
+        return {
+          active: arrows.map(arrow => arrow.active),
+          lives, moves, score, won, gameOver,
+          selected: { ...selected }
+        };
+      }
+
+      function pushHistory() {
+        history.push(snapshot());
+        if (history.length > 80) history.shift();
+      }
+
+      function undo() {
+        if (!history.length || busy) return;
+        const previous = history.pop();
+        arrows.forEach((arrow, index) => { arrow.active = previous.active[index]; });
+        lives = previous.lives;
+        moves = previous.moves;
+        score = previous.score;
+        won = previous.won;
+        gameOver = previous.gameOver;
+        selected = previous.selected;
+        hintId = null;
+        badArrowId = null;
+        badBlockerId = null;
+        $('overlay').classList.remove('show');
+        updateUI();
+        draw();
+        saveProgress();
+        setMessage('↶', 'Last action undone. Try a different order.');
+      }
+
+      function attemptArrow(arrow) {
+        if (!arrow || !arrow.active || busy || won || gameOver) return;
+        pushHistory();
+        hintId = null;
+        moves++;
+        const blockers = getBlockers(arrow);
+        if (blockers.length) {
+          lives = Math.max(0, lives - 1);
+          badArrowId = arrow.id;
+          badBlockerId = blockers[0].id;
+          badUntil = performance.now() + 520;
+          setMessage('!', `That lane is blocked. Clear the ${dirs[blockers[0].dir].name}-pointing arrow in its path first.`);
+          if (lives === 0) {
+            gameOver = true;
+            showOverlay('✕', 'Out of chances', 'The board is still waiting. Restart this puzzle and try a new order.', 'Try again', restartLevel);
+          }
+          updateUI();
+          draw();
+          window.setTimeout(() => { badArrowId = null; badBlockerId = null; draw(); }, 540);
+          return;
+        }
+
+        arrow.active = false;
+        score += 10;
+        if (score > best) best = score;
+        selected = firstRemainingOr(arrow.x, arrow.y);
+        animation = { arrow: { ...arrow }, start: performance.now(), duration: 235 };
+        busy = true;
+        updateUI();
+        animateExit();
+      }
+
+      function firstRemainingOr(x, y) {
+        const active = arrows.filter(arrow => arrow.active);
+        if (!active.length) return { x, y };
+        return { x: active[0].x, y: active[0].y };
+      }
+
+      function animateExit() {
+        if (!animation) return;
+        const now = performance.now();
+        const progress = Math.min(1, (now - animation.start) / animation.duration);
+        draw(progress);
+        if (progress < 1) {
+          requestAnimationFrame(animateExit);
+        } else {
+          animation = null;
+          busy = false;
+          const remaining = arrows.some(arrow => arrow.active);
+          if (!remaining) {
+            won = true;
+            const bonus = 75 + lives * 10;
+            score += bonus;
+            if (score > best) best = score;
+            setMessage('✦', `Perfect clearance. Level bonus: +${bonus} points. Ready for the next board?`);
+            showOverlay('✦', 'Puzzle cleared!', `You sent every arrow out in ${moves} moves. You earned ${bonus} bonus points.`, 'Next level', nextLevel);
+          } else {
+            setMessage('✓', 'Nice move. That arrow is out — look for the next clear lane.');
+          }
+          updateUI();
+          draw();
+          saveProgress();
+        }
+      }
+
+      function showOverlay(symbol, title, copy, buttonText) {
+        $('overlay-symbol').textContent = symbol;
+        $('overlay-title').textContent = title;
+        $('overlay-copy').textContent = copy;
+        $('overlay-action').textContent = buttonText;
+        $('overlay').classList.add('show');
+      }
+
+      function useHint() {
+        if (won || gameOver || busy) return;
+        const free = arrows.find(arrow => arrow.active && getBlockers(arrow).length === 0);
+        if (!free) {
+          setMessage('?', 'No clear arrow found. This should not happen on a generated puzzle — restart this board.');
+          return;
+        }
+        hintId = free.id;
+        selected = { x: free.x, y: free.y };
+        setMessage('✦', `Hint: try the ${dirs[free.dir].name}-pointing arrow glowing on the board.`);
+        updateUI();
+        draw();
+      }
+
+      function restartLevel() {
+        if (busy) return;
+        arrows = initialArrows.map(arrow => ({ ...arrow, active: true }));
+        lives = 3;
+        moves = 0;
+        history = [];
+        hintId = null;
+        won = false;
+        gameOver = false;
+        badArrowId = null;
+        badBlockerId = null;
+        selected = firstActiveCell();
+        $('overlay').classList.remove('show');
+        setMessage('⟳', 'Puzzle reset. Take a moment to spot the arrows with open paths.');
+        updateUI();
+        draw();
+      }
+
+      function nextLevel() {
+        level++;
+        saveProgress();
+        startLevel(randomSeed());
+      }
+
+      function newPuzzle() {
+        startLevel(randomSeed());
+      }
+
+      function resizeCanvas() {
+        const rect = canvas.getBoundingClientRect();
+        if (!rect.width) return;
+        const dpr = Math.min(window.devicePixelRatio || 1, 2.5);
+        const width = Math.round(rect.width * dpr);
+        const height = Math.round(rect.height * dpr);
+        if (canvas.width !== width || canvas.height !== height) {
+          canvas.width = width;
+          canvas.height = height;
+        }
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        geometry.side = rect.width;
+        geometry.pad = Math.max(10, rect.width * 0.035);
+        geometry.gap = Math.max(2, rect.width * 0.007);
+        geometry.cell = (rect.width - geometry.pad * 2 - geometry.gap * (gridSize - 1)) / gridSize;
+        draw();
+      }
+
+      function roundedRect(context, x, y, width, height, radius) {
+        const r = Math.min(radius, width / 2, height / 2);
+        context.beginPath();
+        context.moveTo(x + r, y);
+        context.arcTo(x + width, y, x + width, y + height, r);
+        context.arcTo(x + width, y + height, x, y + height, r);
+        context.arcTo(x, y + height, x, y, r);
+        context.arcTo(x, y, x + width, y, r);
+        context.closePath();
+      }
+
+      function drawArrow(arrow, x, y, cell, options = {}) {
+        const d = dirs[arrow.dir];
+        const cx = x + cell / 2;
+        const cy = y + cell / 2;
+        const color = options.color || (getBlockers(arrow).length === 0 ? '#66ead9' : '#b7a2ff');
+        const scale = Math.min(cell * 0.34, 17);
+        const tailX = cx - d.x * scale * 0.68;
+        const tailY = cy - d.y * scale * 0.68;
+        const tipX = cx + d.x * scale * 0.75;
+        const tipY = cy + d.y * scale * 0.75;
+        ctx.save();
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        ctx.strokeStyle = color;
+        ctx.fillStyle = color;
+        ctx.lineWidth = Math.max(2.5, cell * 0.085);
+        ctx.shadowColor = color;
+        ctx.shadowBlur = options.glow ? 18 : 8;
+        ctx.beginPath();
+        ctx.moveTo(tailX, tailY);
+        ctx.lineTo(tipX, tipY);
+        ctx.stroke();
+        const head = Math.max(5, cell * 0.17);
+        const backX = tipX - d.x * head;
+        const backY = tipY - d.y * head;
+        const perpX = -d.y * head * 0.78;
+        const perpY = d.x * head * 0.78;
+        ctx.beginPath();
+        ctx.moveTo(tipX, tipY);
+        ctx.lineTo(backX + perpX, backY + perpY);
+        ctx.lineTo(backX - perpX, backY - perpY);
+        ctx.closePath();
+        ctx.fill();
+        ctx.restore();
+      }
+
+      function draw(progress = 1) {
+        const side = geometry.side;
+        if (!side || !ctx) return;
+        ctx.clearRect(0, 0, side, side);
+        const bg = ctx.createLinearGradient(0, 0, side, side);
+        bg.addColorStop(0, '#0e1a2c');
+        bg.addColorStop(1, '#0a1322');
+        ctx.fillStyle = bg;
+        roundedRect(ctx, 0, 0, side, side, 14);
+        ctx.fill();
+
+        const { pad, gap, cell } = geometry;
+        for (let y = 0; y < gridSize; y++) {
+          for (let x = 0; x < gridSize; x++) {
+            const px = pad + x * (cell + gap);
+            const py = pad + y * (cell + gap);
+            ctx.fillStyle = 'rgba(134,160,202,.055)';
+            roundedRect(ctx, px, py, cell, cell, Math.max(4, cell * .16));
+            ctx.fill();
+            ctx.strokeStyle = 'rgba(147,174,218,.055)';
+            ctx.lineWidth = 1;
+            ctx.stroke();
+          }
+        }
+
+        for (const arrow of arrows) {
+          if (!arrow.active) continue;
+          const px = pad + arrow.x * (cell + gap);
+          const py = pad + arrow.y * (cell + gap);
+          const blockers = getBlockers(arrow);
+          const free = blockers.length === 0;
+          const isHint = hintId === arrow.id;
+          const isSelected = selected.x === arrow.x && selected.y === arrow.y;
+          const isHover = hoverCell && hoverCell.x === arrow.x && hoverCell.y === arrow.y;
+          const isBad = badArrowId === arrow.id && performance.now() < badUntil;
+          let shake = 0;
+          if (isBad) shake = Math.sin(performance.now() * .09) * Math.min(4, cell * .09);
+          ctx.save();
+          if (isHint) {
+            ctx.fillStyle = 'rgba(92,225,210,.15)';
+            ctx.shadowColor = '#5ce1d2';
+            ctx.shadowBlur = 20;
+          } else if (isBad) {
+            ctx.fillStyle = 'rgba(255,113,136,.2)';
+            ctx.shadowColor = '#ff7188';
+            ctx.shadowBlur = 18;
+          } else {
+            ctx.fillStyle = free ? 'rgba(54,190,174,.12)' : 'rgba(139,116,215,.13)';
+          }
+          roundedRect(ctx, px + 2 + shake, py + 2, cell - 4, cell - 4, Math.max(5, cell * .17));
+          ctx.fill();
+          ctx.shadowBlur = 0;
+          ctx.strokeStyle = isSelected ? 'rgba(255,255,255,.82)' : isHint ? 'rgba(92,225,210,.9)' : isBad ? 'rgba(255,113,136,.9)' : (isHover ? 'rgba(210,225,255,.52)' : (free ? 'rgba(92,225,210,.24)' : 'rgba(167,139,250,.23)'));
+          ctx.lineWidth = isSelected || isHint ? 2 : 1;
+          roundedRect(ctx, px + 2 + shake, py + 2, cell - 4, cell - 4, Math.max(5, cell * .17));
+          ctx.stroke();
+          ctx.restore();
+          drawArrow(arrow, px + shake, py, cell, { glow: isHint || isSelected });
+          if (badBlockerId === arrow.id && performance.now() < badUntil) {
+            ctx.save();
+            ctx.strokeStyle = 'rgba(255,182,109,.92)';
+            ctx.lineWidth = 2.5;
+            roundedRect(ctx, px + 1, py + 1, cell - 2, cell - 2, Math.max(5, cell * .17));
+            ctx.stroke();
+            ctx.restore();
+          }
+        }
+
+        if (animation && progress < 1) {
+          const arrow = animation.arrow;
+          const d = dirs[arrow.dir];
+          const travel = (cell + pad * .7) * progress;
+          const px = pad + arrow.x * (cell + gap) + d.x * travel;
+          const py = pad + arrow.y * (cell + gap) + d.y * travel;
+          ctx.globalAlpha = 1 - progress * .55;
+          drawArrow(arrow, px, py, cell, { color: '#75f2e2', glow: true });
+          ctx.globalAlpha = 1;
+        }
+      }
+
+      function cellFromPointer(event) {
+        const rect = canvas.getBoundingClientRect();
+        const x = event.clientX - rect.left;
+        const y = event.clientY - rect.top;
+        const { pad, gap, cell } = geometry;
+        const col = Math.floor((x - pad) / (cell + gap));
+        const row = Math.floor((y - pad) / (cell + gap));
+        if (col < 0 || row < 0 || col >= gridSize || row >= gridSize) return null;
+        const localX = (x - pad) - col * (cell + gap);
+        const localY = (y - pad) - row * (cell + gap);
+        if (localX > cell || localY > cell) return null;
+        return { x: col, y: row };
+      }
+
+      canvas.addEventListener('pointerdown', event => {
+        event.preventDefault();
+        if (busy || won || gameOver) return;
+        const cell = cellFromPointer(event);
+        if (!cell) return;
+        const arrow = arrows.find(item => item.active && item.x === cell.x && item.y === cell.y);
+        if (!arrow) {
+          selected = cell;
+          draw();
+          return;
+        }
+        selected = cell;
+        attemptArrow(arrow);
+      });
+
+      canvas.addEventListener('pointermove', event => {
+        if (event.pointerType === 'touch') return;
+        hoverCell = cellFromPointer(event);
+        draw();
+      });
+      canvas.addEventListener('pointerleave', () => { hoverCell = null; draw(); });
+
+      function moveSelection(dx, dy) {
+        let x = selected.x;
+        let y = selected.y;
+        for (let i = 0; i < gridSize; i++) {
+          x = (x + dx + gridSize) % gridSize;
+          y = (y + dy + gridSize) % gridSize;
+          const arrow = arrows.find(item => item.active && item.x === x && item.y === y);
+          if (arrow) { selected = { x, y }; draw(); return; }
+        }
+      }
+
+      canvas.addEventListener('keydown', event => {
+        const keyMap = {
+          ArrowUp: [0, -1], ArrowDown: [0, 1], ArrowLeft: [-1, 0], ArrowRight: [1, 0],
+          w: [0, -1], s: [0, 1], a: [-1, 0], d: [1, 0]
+        };
+        const move = keyMap[event.key] || keyMap[event.key.toLowerCase()];
+        if (move) {
+          event.preventDefault();
+          moveSelection(move[0], move[1]);
+        } else if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          const arrow = arrows.find(item => item.active && item.x === selected.x && item.y === selected.y);
+          attemptArrow(arrow);
+        }
+      });
+
+      $('undo-btn').addEventListener('click', undo);
+      $('hint-btn').addEventListener('click', useHint);
+      $('restart-btn').addEventListener('click', restartLevel);
+      $('new-btn').addEventListener('click', newPuzzle);
+      $('next-btn').addEventListener('click', nextLevel);
+      $('overlay-action').addEventListener('click', () => {
+        if (won) nextLevel();
+        else restartLevel();
+      });
+
+      if ('ResizeObserver' in window) {
+        const observer = new ResizeObserver(resizeCanvas);
+        observer.observe(canvas);
+      } else {
+        window.addEventListener('resize', resizeCanvas);
+      }
+
+      startLevel(seed);
+    })();
+  </script>
+</body>
+</html>
